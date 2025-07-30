@@ -1,0 +1,69 @@
+10 CLEAR 40959
+20 LAYER 1,2
+30 INPUT "Host",host$
+40 RUN AT 1
+50 GO SUB 490: REM Open Channel and install if needed
+60 ON ERROR GO TO 470
+70 OPEN # 6,"w>0,0,22,32,6"
+80 OPEN # 5,"w>22,0,2,32,5"
+90 BORDER 0: PAPER 0: INK 7: CLS
+100 PRINT #6;"ESPAT BASIC Telnet"
+110 PRINT #6;"Press BREAK to exit."
+120 PROC tcpconnect(host$,23)
+130 ON ERROR GO TO 460
+140 DRIVER 78,3,128 TO %f,%i,%o: REM will clear flags
+150 DIM #7 TO %s
+160 PRINT #5; AT 1,0;%s;"    ";%i;",";%o;",";%f;"    "
+170 IF %s=0 THEN GO TO 380
+180 NEXT #7 TO c
+190 IF c=255
+200 NEXT #7 TO t
+210 IF t > 250
+220    NEXT #7 TO x
+230    IF t=251 OR t=252
+240 IF x=1
+250      PRINT #7; CHR$ 255; CHR$ 253; CHR$ x;
+260 ELSE
+270      PRINT #7; CHR$ 255; CHR$ 254; CHR$ x;
+280 ENDIF
+290    ELSE IF t=253 OR t=254
+300      PRINT #7; CHR$ 255; CHR$ 252+ CHR$ x;
+310    ENDIF
+320 ENDIF
+330 GO TO 180
+340 STOP
+350 ENDIF
+360 IF c=10 THEN PRINT #6: LET c=13: GO TO 380
+370 PRINT #6; CHR$ (c); : IF c=0 THEN PRINT #6;"_";
+380 IF INKEY$ ="" THEN GO TO 140
+390 LET c$= INKEY$
+400 IF INKEY$ <> "" THEN GO TO 400
+410 ;PRINT #5;c$; : REM local echo
+420 IF c$= CHR$ (13) THEN PRINT #7; CHR$ (10); : GO TO 140: REM CR/LF for unix use
+430 IF c$= CHR$ (12) THEN PRINT #7; CHR$ (8); : GO TO 140: REM DELETE code
+440 PRINT #7;c$;
+450 GO TO 140
+460 INPUT "Break ?";a$: IF a$ <> "y" AND a$ <> "Y" THEN GO TO 140
+470 ON ERROR : CLOSE # 15: CLOSE # 7: CLOSE # 6: CLOSE # 5
+480 STOP
+490 REM See if we can open network if not install drivers
+500 ON ERROR GO TO 540
+510 OPEN # 15,"D>N"
+520 ON ERROR GO TO 460
+530 RETURN
+540 PRINT "Installing driver in main memory as not loaded."
+550 .install /nextzxos/espat.drv
+560 PRINT "Installed ESPAT.DRV"
+570 LET %n=78
+580 LET %m=0: PRINT "ESPAT.SYS Load page ";%m
+590 LOAD "/nextzxos/espat.sys" CODE 40960: REM IN main memory
+600 DRIVER %n,1,%m: REM 0 to allocate main memory, patch and initialise
+610 BANK NEW %b: PRINT "Allocating 1 buffer ";%b
+620 DRIVER %n,6,%b
+630 DRIVER %n,9,0 TO %p: PRINT "115K Baud - prescaler ";%p
+640 DRIVER %n,3: PRINT "IPD Driver started"
+650 RETURN
+660 DEFPROC tcpconnect(n$,p)
+670 OPEN # 7,"D>N>TCP,"+n$+","+ STR$ (p)
+680 DRIVER 78,10,1,1: REM set 256/CR buffer mode
+690 ENDPROC
