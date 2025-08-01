@@ -1,85 +1,100 @@
 #program telnet
   10 CLEAR 40959
-  20 LAYER 1,2
-  30 BORDER 0: PAPER 0: INK 7: CLS 
-  40 RUN AT 1
-  50 INPUT "host", host$ : PRINT 
-  60 IF host$="" THEN PRINT ;"Missing host name." : GO TO %50
-  70 INPUT "port, or return for 23", p
-  80 IF p=0 THEN p=23
-  90 GO SUB %640: REM Open Channel and install if needed
- 100 CLS 
- 110 ON ERROR GO TO %610
- 120 OPEN # 6,"w>0,0,20,32,5"
- 130 OPEN # 5,"w>20,0,2,32,6"
- 140 OPEN # 8,"w>22,0,2,32,6"
- 150 PRINT #6;"ESPAT BASIC terminal"
- 160 PRINT #6;"Press BREAK to exit."
- 170 q=0
- 180 r=0
- 190 PROC tcpconnect(host$,p)
- 200 ON ERROR GO TO %600
- 210 DRIVER 78,3,128 TO %f,%i,%o: REM will clear flags
- 220 DIM #7 TO %s
- 230 PRINT #5; AT 1,0;%s;"    ";%i;",";%o;",";%f;"    ";q;"    ";
- 240 IF %s=0 THEN GO TO %520
- 250 NEXT #7 TO c
- 260 IF q=1 THEN GO TO %300
- 270 IF q=2 THEN GO TO %310
- 280 IF c=255 AND q=0 THEN q=1 : GO TO %210
- 290 GO TO %460
- 300 IF c > 250 THEN t=c : q=2 : GO TO %210
- 310   PRINT #8; AT 1,0 ;c ; "    ";
- 320   IF t=251 OR t=252
- 330     IF c=1 :; ACCEPT ECHO
- 340       PRINT #7; CHR$ 255; CHR$ 253; CHR$ c;
- 350       q=0 : GO TO %210
- 360     ELSE 
- 370       PRINT #7; CHR$ 255; CHR$ 254; CHR$ c; :; DONT
- 380       q=0 : GO TO %210
- 390     ENDIF 
- 400   ELSE IF t=253 OR t=254
- 410     PRINT #7; CHR$ 255; CHR$ 252+ CHR$ c; :; WONT
- 420     q=0 : GO TO %210
- 430   ENDIF 
- 440 t=0
- 450 ENDIF 
- 460 q=0
- 470 IF c=10 THEN PRINT #6: LET c=13: GO TO %520
- 480 ; Incomplete filtering of ANSI escape sequences
- 490 IF c=27 AND r=0 THEN r=1 : GO TO %210
- 500 IF c=91 AND r=1 THEN r=0 : GO TO %210
- 510 PRINT #6; CHR$ (c); : IF c=0 THEN PRINT #6;"_";
- 520 IF INKEY$ ="" THEN GO TO %210
- 530 LET c$= INKEY$ 
- 540 IF INKEY$ <>"" THEN GO TO %540
- 550 ;PRINT #5;c$; : REM local echo
- 560 IF c$= CHR$ (13) THEN PRINT #7; CHR$ (10); : GO TO %210: REM CR/LF for unix use
- 570 IF c$= CHR$ (12) THEN PRINT #7; CHR$ (127); : GO TO %210: REM DELETE code
- 580 PRINT #7;c$;
- 590 GO TO %210
- 600 INPUT "Break ?";a$: IF a$<>"y" AND a$<>"Y" THEN GO TO %210
- 610 ON ERROR : CLOSE # 15: CLOSE # 8 : CLOSE # 7: CLOSE # 6: CLOSE # 5
- 620 .uninstall /nextzxos/espat.drv
- 630 STOP 
- 640 REM See if we can open network if not install drivers
- 650 ON ERROR GO TO %690
- 660 OPEN # 15,"D>N"
- 670 ON ERROR GO TO %600
- 680 RETURN 
- 690 PRINT "Installing driver in main memory as not loaded."
- 700 .install /nextzxos/espat.drv
- 710 PRINT "Installed ESPAT.DRV"
- 720 LET %n=78
- 730 LET %m=0: PRINT "ESPAT.SYS Load page ";%m
- 740 LOAD "/nextzxos/espat.sys" CODE 40960: REM IN main memory
- 750 DRIVER %n,1,%m: REM 0 to allocate main memory, patch and initialise
- 760 BANK NEW %b: PRINT "Allocating 1 buffer ";%b
- 770 DRIVER %n,6,%b
- 780 DRIVER %n,9,0 TO %p: PRINT "115K Baud - prescaler ";%p
- 790 DRIVER %n,3: PRINT "IPD Driver started"
- 800 RETURN 
- 810 DEFPROC tcpconnect(n$,p)
- 820 OPEN # 7,"D>N>TCP,"+n$+","+ STR$ (p)
- 830 DRIVER 78,10,1,1: REM immediate send
- 840 ENDPROC 
+  20 d=0 :; set to 1 to enable status lines
+  30 ; To use a HTTP CONNECT proxy, configure it here
+  40 proxy$=""
+  50 pport=3128
+  60 LAYER 1,2
+  70 BORDER 0: PAPER 0: INK 7: CLS 
+  80 RUN AT 1
+  90 INPUT "host", host$ : PRINT 
+ 100 IF host$="" THEN PRINT ;"Missing host name." : GO TO %90
+ 110 INPUT "port, or return for 23", p
+ 120 IF p=0 THEN p=23
+ 130 GO SUB %790: REM Open Channel and install if needed
+ 140 CLS 
+ 150 ON ERROR GO TO %760
+ 160 IF d=1  
+ 170   OPEN # 6,"w>0,0,22,32,5"
+ 180   OPEN # 5,"w>21,0,2,32,5"
+ 190   OPEN # 8,"w>22,0,2,32,5"
+ 200 ELSE 
+ 210   OPEN # 6,"w>0,0,24,32,5"
+ 220 ENDIF 
+ 230 PRINT #6;"ESPAT BASIC terminal"
+ 240 PRINT #6;"Press BREAK to exit."
+ 250 q=0
+ 260 r=0
+ 270 IF proxy$=""
+ 280 PROC tcpconnect(host$,p)
+ 290 ELSE 
+ 300 PROC tcpconnect(proxy$,pport)
+ 310 PRINT #7; "connect " ; host$ ; ":" ; p ; " HTTP/1.0" ; CHR$ (10) ; CHR$ (10) ;
+ 320 ENDIF 
+ 330 ON ERROR GO TO %750
+ 340 DRIVER 78,3,128 TO %f,%i,%o: REM will clear flags
+ 350 DIM #7 TO %s
+ 360 IF d=1 THEN PRINT #5; AT 1,0;%s;"    ";%i;",";%o;",";%f;"    ";q;"    ";
+ 370 IF %s=0 THEN GO TO %660
+ 380 NEXT #7 TO c
+ 390 IF q=1 THEN GO TO %430
+ 400 IF q=2 THEN GO TO %440
+ 410 IF c=255 AND q=0 THEN q=1 : GO TO %340
+ 420 GO TO %590
+ 430 IF c > 250 THEN t=c : q=2 : GO TO %340
+ 440 IF d=1 THEN PRINT #8; AT 1,0 ;c ; "    ";
+ 450   IF t=251 OR t=252
+ 460     IF c=1 :; ACCEPT ECHO
+ 470       PRINT #7; CHR$ 255; CHR$ 253; CHR$ c;
+ 480       q=0 : GO TO %340
+ 490     ELSE 
+ 500       PRINT #7; CHR$ 255; CHR$ 254; CHR$ c; :; DONT
+ 510       q=0 : GO TO %340
+ 520     ENDIF 
+ 530   ELSE IF t=253 OR t=254
+ 540     PRINT #7; CHR$ 255; CHR$ 252+ CHR$ c; :; WONT
+ 550     q=0 : GO TO %340
+ 560   ENDIF 
+ 570 t=0
+ 580 ENDIF 
+ 590 q=0
+ 600 IF c=10 THEN PRINT #6: LET c=13: GO TO %660
+ 610 IF c = 13 THEN GO TO %660
+ 620 ; Incomplete filtering of ANSI escape sequences
+ 630 IF c=27 AND r=0 THEN r=1 : GO TO %340
+ 640 IF c=91 AND r=1 THEN r=0 : GO TO %340
+ 650 PRINT #6; CHR$ (c); : IF c=0 THEN PRINT #6;"_";
+ 660 IF INKEY$ ="" THEN GO TO %340
+ 670 LET c$= INKEY$ 
+ 680 IF INKEY$ <>"" THEN GO TO %680
+ 690 ;PRINT #5;c$; : REM local echo
+ 700 ;IF c$= CHR$ (13) THEN PRINT #7; CHR$ (10); : GO TO %320: REM CR/LF for unix use
+ 710 IF c$= CHR$ (12) THEN PRINT #7; CHR$ (127); : GO TO %340: REM DELETE code
+ 720 IF c$= CHR$ (7) THEN PRINT #7; CHR$ (27); : GO TO %340: REM EDIT as ESCAPE
+ 730 PRINT #7;c$;
+ 740 GO TO %340
+ 750 INPUT "Break ?";a$: IF a$<>"y" AND a$<>"Y" THEN GO TO %340
+ 760 ON ERROR : CLOSE # 15: CLOSE # 8 : CLOSE # 7: CLOSE # 6: CLOSE # 5
+ 770 .uninstall /nextzxos/espat.drv
+ 780 STOP 
+ 790 REM See if we can open network if not install drivers
+ 800 ON ERROR GO TO %840
+ 810 OPEN # 15,"D>N"
+ 820 ON ERROR GO TO %750
+ 830 RETURN 
+ 840 PRINT "Installing driver in main memory as not loaded."
+ 850 .install /nextzxos/espat.drv
+ 860 PRINT "Installed ESPAT.DRV"
+ 870 LET %n=78
+ 880 LET %m=0: PRINT "ESPAT.SYS Load page ";%m
+ 890 LOAD "/nextzxos/espat.sys" CODE 40960: REM IN main memory
+ 900 DRIVER %n,1,%m: REM 0 to allocate main memory, patch and initialise
+ 910 BANK NEW %b: PRINT "Allocating 1 buffer ";%b
+ 920 DRIVER %n,6,%b
+ 930 DRIVER %n,9,0 TO %p: PRINT "115K Baud - prescaler ";%p
+ 940 DRIVER %n,3: PRINT "IPD Driver started"
+ 950 RETURN 
+ 960 DEFPROC tcpconnect(n$,p)
+ 970 OPEN # 7,"D>N>TCP,"+n$+","+ STR$ (p)
+ 980 DRIVER 78,10,1,1: REM immediate send
+ 990 ENDPROC 
