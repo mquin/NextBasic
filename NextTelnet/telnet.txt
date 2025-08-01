@@ -1,78 +1,85 @@
 #program telnet
   10 CLEAR 40959
   20 LAYER 1,2
-  30 RUN AT 1
-  40 p=23
-  50 INPUT "host", host$
-  60 GO SUB %570: REM Open Channel and install if needed
-  70 ON ERROR GO TO %540
-  80 OPEN # 6,"w>0,1,20,32,6"
-  90 OPEN # 5,"w>20,0,2,32,6"
- 100 OPEN # 8,"w>22,0,2,32,6"
- 110 BORDER 0: PAPER 0: INK 7: CLS 
- 120 PRINT #6;"ESPAT BASIC terminal"
- 130 PRINT #6;"Press BREAK to exit."
- 140 q=0
- 150 PROC tcpconnect(host$,p)
- 160 ON ERROR GO TO %530
- 170 DRIVER 78,3,128 TO %f,%i,%o: REM will clear flags
- 180 DIM #7 TO %s
- 190 PRINT #5; AT 1,0;%s;"    ";%i;",";%o;",";%f;"    ";q;"    ";
- 200 IF %s=0 THEN GO TO %450
- 210 NEXT #7 TO c
- 220 IF q=1 THEN GO TO %260
- 230 IF q=2 THEN GO TO %270
- 240 IF c=255 AND q=0 THEN q=1 : GO TO %170
- 250 GO TO %420
- 260 IF c > 250 THEN t=c : q=2 : GO TO %170
- 270   PRINT #8; AT 1,0 ;c ; "    ";
- 280   IF t=251 OR t=252
- 290     IF c=1 :; ACCEPT ECHO
- 300       PRINT #7; CHR$ 255; CHR$ 253; CHR$ c;
- 310       q=0 : GO TO %170
- 320     ELSE 
- 330       PRINT #7; CHR$ 255; CHR$ 254; CHR$ c; :; DONT
- 340       q=0 : GO TO %170
- 350     ENDIF 
- 360   ELSE IF t=253 OR t=254
- 370     PRINT #7; CHR$ 255; CHR$ 252+ CHR$ c; :; WONT
- 380     q=0 : GO TO %170
- 390   ENDIF 
- 400 t=0
- 410 ENDIF 
- 420 q=0
- 430 IF c=10 THEN PRINT #6: LET c=13: GO TO %450
- 440 PRINT #6; CHR$ (c); : IF c=0 THEN PRINT #6;"_";
- 450 IF INKEY$ ="" THEN GO TO %170
- 460 LET c$= INKEY$ 
- 470 IF INKEY$ <>"" THEN GO TO %470
- 480 ;PRINT #5;c$; : REM local echo
- 490 IF c$= CHR$ (13) THEN PRINT #7; CHR$ (10); : GO TO %170: REM CR/LF for unix use
- 500 IF c$= CHR$ (12) THEN PRINT #7; CHR$ (8); : GO TO %170: REM DELETE code
- 510 PRINT #7;c$;
- 520 GO TO %170
- 530 INPUT "Break ?";a$: IF a$<>"y" AND a$<>"Y" THEN GO TO %170
- 540 ON ERROR : CLOSE # 15: CLOSE # 8 : CLOSE # 7: CLOSE # 6: CLOSE # 5
- 550 .uninstall /nextzxos/espat.drv
- 560 STOP 
- 570 REM See if we can open network if not install drivers
- 580 ON ERROR GO TO %620
- 590 OPEN # 15,"D>N"
- 600 ON ERROR GO TO %530
- 610 RETURN 
- 620 PRINT "Installing driver in main memory as not loaded."
- 630 .install /nextzxos/espat.drv
- 640 PRINT "Installed ESPAT.DRV"
- 650 LET %n=78
- 660 LET %m=0: PRINT "ESPAT.SYS Load page ";%m
- 670 LOAD "/nextzxos/espat.sys" CODE 40960: REM IN main memory
- 680 DRIVER %n,1,%m: REM 0 to allocate main memory, patch and initialise
- 690 BANK NEW %b: PRINT "Allocating 1 buffer ";%b
- 700 DRIVER %n,6,%b
- 710 DRIVER %n,9,0 TO %p: PRINT "115K Baud - prescaler ";%p
- 720 DRIVER %n,3: PRINT "IPD Driver started"
- 730 RETURN 
- 740 DEFPROC tcpconnect(n$,p)
- 750 OPEN # 7,"D>N>TCP,"+n$+","+ STR$ (p)
- 760 DRIVER 78,10,1,1: REM immediate send
- 770 ENDPROC 
+  30 BORDER 0: PAPER 0: INK 7: CLS 
+  40 RUN AT 1
+  50 INPUT "host", host$ : PRINT 
+  60 IF host$="" THEN PRINT ;"Missing host name." : GO TO %50
+  70 INPUT "port, or return for 23", p
+  80 IF p=0 THEN p=23
+  90 GO SUB %640: REM Open Channel and install if needed
+ 100 CLS 
+ 110 ON ERROR GO TO %610
+ 120 OPEN # 6,"w>0,0,20,32,5"
+ 130 OPEN # 5,"w>20,0,2,32,6"
+ 140 OPEN # 8,"w>22,0,2,32,6"
+ 150 PRINT #6;"ESPAT BASIC terminal"
+ 160 PRINT #6;"Press BREAK to exit."
+ 170 q=0
+ 180 r=0
+ 190 PROC tcpconnect(host$,p)
+ 200 ON ERROR GO TO %600
+ 210 DRIVER 78,3,128 TO %f,%i,%o: REM will clear flags
+ 220 DIM #7 TO %s
+ 230 PRINT #5; AT 1,0;%s;"    ";%i;",";%o;",";%f;"    ";q;"    ";
+ 240 IF %s=0 THEN GO TO %520
+ 250 NEXT #7 TO c
+ 260 IF q=1 THEN GO TO %300
+ 270 IF q=2 THEN GO TO %310
+ 280 IF c=255 AND q=0 THEN q=1 : GO TO %210
+ 290 GO TO %460
+ 300 IF c > 250 THEN t=c : q=2 : GO TO %210
+ 310   PRINT #8; AT 1,0 ;c ; "    ";
+ 320   IF t=251 OR t=252
+ 330     IF c=1 :; ACCEPT ECHO
+ 340       PRINT #7; CHR$ 255; CHR$ 253; CHR$ c;
+ 350       q=0 : GO TO %210
+ 360     ELSE 
+ 370       PRINT #7; CHR$ 255; CHR$ 254; CHR$ c; :; DONT
+ 380       q=0 : GO TO %210
+ 390     ENDIF 
+ 400   ELSE IF t=253 OR t=254
+ 410     PRINT #7; CHR$ 255; CHR$ 252+ CHR$ c; :; WONT
+ 420     q=0 : GO TO %210
+ 430   ENDIF 
+ 440 t=0
+ 450 ENDIF 
+ 460 q=0
+ 470 IF c=10 THEN PRINT #6: LET c=13: GO TO %520
+ 480 ; Incomplete filtering of ANSI escape sequences
+ 490 IF c=27 AND r=0 THEN r=1 : GO TO %210
+ 500 IF c=91 AND r=1 THEN r=0 : GO TO %210
+ 510 PRINT #6; CHR$ (c); : IF c=0 THEN PRINT #6;"_";
+ 520 IF INKEY$ ="" THEN GO TO %210
+ 530 LET c$= INKEY$ 
+ 540 IF INKEY$ <>"" THEN GO TO %540
+ 550 ;PRINT #5;c$; : REM local echo
+ 560 IF c$= CHR$ (13) THEN PRINT #7; CHR$ (10); : GO TO %210: REM CR/LF for unix use
+ 570 IF c$= CHR$ (12) THEN PRINT #7; CHR$ (127); : GO TO %210: REM DELETE code
+ 580 PRINT #7;c$;
+ 590 GO TO %210
+ 600 INPUT "Break ?";a$: IF a$<>"y" AND a$<>"Y" THEN GO TO %210
+ 610 ON ERROR : CLOSE # 15: CLOSE # 8 : CLOSE # 7: CLOSE # 6: CLOSE # 5
+ 620 .uninstall /nextzxos/espat.drv
+ 630 STOP 
+ 640 REM See if we can open network if not install drivers
+ 650 ON ERROR GO TO %690
+ 660 OPEN # 15,"D>N"
+ 670 ON ERROR GO TO %600
+ 680 RETURN 
+ 690 PRINT "Installing driver in main memory as not loaded."
+ 700 .install /nextzxos/espat.drv
+ 710 PRINT "Installed ESPAT.DRV"
+ 720 LET %n=78
+ 730 LET %m=0: PRINT "ESPAT.SYS Load page ";%m
+ 740 LOAD "/nextzxos/espat.sys" CODE 40960: REM IN main memory
+ 750 DRIVER %n,1,%m: REM 0 to allocate main memory, patch and initialise
+ 760 BANK NEW %b: PRINT "Allocating 1 buffer ";%b
+ 770 DRIVER %n,6,%b
+ 780 DRIVER %n,9,0 TO %p: PRINT "115K Baud - prescaler ";%p
+ 790 DRIVER %n,3: PRINT "IPD Driver started"
+ 800 RETURN 
+ 810 DEFPROC tcpconnect(n$,p)
+ 820 OPEN # 7,"D>N>TCP,"+n$+","+ STR$ (p)
+ 830 DRIVER 78,10,1,1: REM immediate send
+ 840 ENDPROC 
